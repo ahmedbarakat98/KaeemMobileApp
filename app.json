@@ -1,16 +1,19 @@
 {
   "expo": {
-    "name": "fodica-mobile",
-    "slug": "fodica-mobile",
+    "name": "Kaeem Mobile App",
+    "slug": "kaeem-mobile-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "fodicamobile",
+    "scheme": "kaeemmobileapp",
     "userInterfaceStyle": "automatic",
-    "ios": {
-      "icon": "./assets/expo.icon"
-    },
     "android": {
+      "package": "com.ahmedbarakat.kaeemmobileapp",
+      "versionCode": 1,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -39,6 +42,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "efd433a7-f4ba-4248-b386-f73e69b84aa4"
+      }
     }
   }
 }

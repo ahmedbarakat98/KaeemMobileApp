@@ -11,39 +11,65 @@ import {
   View,
 } from "react-native";
 import { router } from "expo-router";
-import { MapPin } from "lucide-react-native";
+import { UserPlus } from "lucide-react-native";
 
 import { useAuth } from "@/hooks/useAuth";
 
-export default function AuthScreen() {
-  const { signIn } = useAuth();
+export default function SignUpScreen() {
+  const { signUp } = useAuth();
 
-  const [usernameOrEmail, setUsernameOrEmail] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function onSubmit() {
-    if (!usernameOrEmail.trim()) {
-      Alert.alert("Error", "Username or email is required.");
+    if (!fullName.trim()) {
+      Alert.alert("Missing Data", "Full name is required.");
       return;
     }
 
-    if (!password.trim()) {
-      Alert.alert("Error", "Password is required.");
+    if (!email.trim()) {
+      Alert.alert("Missing Data", "Email is required.");
+      return;
+    }
+
+    if (!email.includes("@")) {
+      Alert.alert("Invalid Email", "Please enter a valid email address.");
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert("Weak Password", "Password must be at least 6 characters.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert("Password Error", "Passwords do not match.");
       return;
     }
 
     setBusy(true);
 
     try {
-      const result = await signIn(usernameOrEmail, password);
+      const { error } = await signUp(email, password, fullName);
 
-      if (result.error) {
-        Alert.alert("Login failed", result.error.message);
+      if (error) {
+        Alert.alert("Sign up failed", error.message);
         return;
       }
 
-      router.replace("/");
+      Alert.alert(
+        "Account Created",
+        "Your account has been created successfully.",
+        [
+          {
+            text: "Go to Login",
+            onPress: () => router.replace("/auth"),
+          },
+        ]
+      );
     } catch {
       Alert.alert("Error", "Something went wrong.");
     } finally {
@@ -58,19 +84,29 @@ export default function AuthScreen() {
     >
       <View style={styles.card}>
         <View style={styles.logo}>
-          <MapPin size={32} color="#ffffff" />
+          <UserPlus size={32} color="#ffffff" />
         </View>
 
-        <Text style={styles.title}>Kaeem Mobile App</Text>
-        <Text style={styles.subtitle}>Sign in to continue</Text>
+        <Text style={styles.title}>Create Account</Text>
+        <Text style={styles.subtitle}>Sign up to use the app</Text>
 
-        <Text style={styles.label}>Username or Email</Text>
+        <Text style={styles.label}>Full Name</Text>
         <TextInput
-          value={usernameOrEmail}
-          onChangeText={setUsernameOrEmail}
-          placeholder="admin or email@example.com"
+          value={fullName}
+          onChangeText={setFullName}
+          placeholder="Enter full name"
+          placeholderTextColor="#94a3b8"
+          style={styles.input}
+        />
+
+        <Text style={styles.label}>Email</Text>
+        <TextInput
+          value={email}
+          onChangeText={setEmail}
+          placeholder="email@example.com"
           placeholderTextColor="#94a3b8"
           autoCapitalize="none"
+          keyboardType="email-address"
           style={styles.input}
         />
 
@@ -84,6 +120,16 @@ export default function AuthScreen() {
           style={styles.input}
         />
 
+        <Text style={styles.label}>Confirm Password</Text>
+        <TextInput
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          placeholder="Confirm password"
+          placeholderTextColor="#94a3b8"
+          secureTextEntry
+          style={styles.input}
+        />
+
         <Pressable
           onPress={onSubmit}
           disabled={busy}
@@ -92,20 +138,13 @@ export default function AuthScreen() {
           {busy ? (
             <ActivityIndicator color="#ffffff" />
           ) : (
-            <Text style={styles.buttonText}>Sign in</Text>
+            <Text style={styles.buttonText}>Create Account</Text>
           )}
         </Pressable>
 
-        <Pressable
-          onPress={() => router.push("/signup")}
-          style={styles.signupButton}
-        >
-          <Text style={styles.signupText}>
-            Don't have an account? Create account
-          </Text>
+        <Pressable onPress={() => router.replace("/auth")}>
+          <Text style={styles.loginText}>Already have an account? Sign in</Text>
         </Pressable>
-
-        <Text style={styles.hint}>Admin login: admin / admin</Text>
       </View>
     </KeyboardAvoidingView>
   );
@@ -177,20 +216,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "900",
   },
-  signupButton: {
+  loginText: {
     marginTop: 16,
-    alignItems: "center",
-  },
-  signupText: {
     color: "#2563eb",
     fontSize: 13,
-    fontWeight: "900",
-    textAlign: "center",
-  },
-  hint: {
-    marginTop: 14,
-    color: "#64748b",
-    fontSize: 12,
+    fontWeight: "800",
     textAlign: "center",
   },
 });

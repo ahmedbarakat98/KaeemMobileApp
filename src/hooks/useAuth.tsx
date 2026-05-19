@@ -17,6 +17,11 @@ type AuthContextType = {
     usernameOrEmail: string,
     password: string
   ) => Promise<{ error: any; isAdmin: boolean }>;
+  signUp: (
+    email: string,
+    password: string,
+    fullName: string
+  ) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 };
 
@@ -66,6 +71,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAdmin(admin);
 
     return { error: null, isAdmin: admin };
+  }
+
+  async function signUp(email: string, password: string, fullName: string) {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanFullName = fullName.trim();
+
+    const { error } = await supabase.auth.signUp({
+      email: cleanEmail,
+      password,
+      options: {
+        data: {
+          full_name: cleanFullName,
+        },
+      },
+    });
+
+    return { error };
   }
 
   async function signOut() {
@@ -120,6 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAdmin,
         loading,
         signIn,
+        signUp,
         signOut,
       }}
     >
