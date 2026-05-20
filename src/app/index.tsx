@@ -19,6 +19,7 @@ import { MapPin, Send, Shield } from "lucide-react-native";
 
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
+import { useI18n } from "@/lib/i18n";
 
 type FormState = {
   customerName: string;
@@ -50,6 +51,7 @@ const initialForm: FormState = {
 
 export default function HomeScreen() {
   const { user, isAdmin, loading, signOut } = useAuth();
+  const { t, language, isArabic, toggleLanguage } = useI18n();
 
   const [form, setForm] = useState<FormState>(initialForm);
   const [latitude, setLatitude] = useState<number | null>(null);
@@ -78,8 +80,10 @@ export default function HomeScreen() {
 
       if (status !== "granted") {
         Alert.alert(
-          "Location permission required",
-          "Please allow location permission to save the customer location."
+          isArabic ? "إذن الموقع مطلوب" : "Location permission required",
+          isArabic
+            ? "من فضلك اسمح للتطبيق باستخدام الموقع لحفظ موقع العميل."
+            : "Please allow location permission to save the customer location."
         );
         return;
       }
@@ -91,9 +95,19 @@ export default function HomeScreen() {
       setLatitude(position.coords.latitude);
       setLongitude(position.coords.longitude);
 
-      Alert.alert("Done", "Location captured successfully.");
-    } catch (error) {
-      Alert.alert("Error", "Could not get current location.");
+      Alert.alert(
+        t("done"),
+        isArabic
+          ? "تم تسجيل الموقع بنجاح."
+          : "Location captured successfully."
+      );
+    } catch {
+      Alert.alert(
+        t("error"),
+        isArabic
+          ? "تعذر الحصول على الموقع الحالي."
+          : "Could not get current location."
+      );
     } finally {
       setGettingLocation(false);
     }
@@ -106,27 +120,44 @@ export default function HomeScreen() {
     }
 
     if (!form.customerName.trim()) {
-      Alert.alert("Missing data", "Customer name is required.");
+      Alert.alert(
+        t("missingData"),
+        isArabic ? "اسم العميل مطلوب." : "Customer name is required."
+      );
       return;
     }
 
     if (!form.invoiceNumber.trim()) {
-      Alert.alert("Missing data", "Invoice number is required.");
+      Alert.alert(
+        t("missingData"),
+        isArabic ? "رقم الفاتورة مطلوب." : "Invoice number is required."
+      );
       return;
     }
 
     if (!form.address.trim()) {
-      Alert.alert("Missing data", "Address is required.");
+      Alert.alert(
+        t("missingData"),
+        isArabic ? "العنوان مطلوب." : "Address is required."
+      );
       return;
     }
 
     if (!form.phone.trim()) {
-      Alert.alert("Missing data", "Phone is required.");
+      Alert.alert(
+        t("missingData"),
+        isArabic ? "رقم الهاتف مطلوب." : "Phone is required."
+      );
       return;
     }
 
     if (latitude === null || longitude === null) {
-      Alert.alert("Missing location", "Please capture GPS location first.");
+      Alert.alert(
+        t("missingData"),
+        isArabic
+          ? "من فضلك قم بتسجيل موقع GPS أولًا."
+          : "Please capture GPS location first."
+      );
       return;
     }
 
@@ -159,17 +190,28 @@ export default function HomeScreen() {
       });
 
       if (error) {
-        Alert.alert("Submit failed", error.message);
+        Alert.alert(
+          isArabic ? "فشل الإرسال" : "Submit failed",
+          error.message
+        );
         return;
       }
 
-      Alert.alert("Success", "Submission saved successfully.");
+      Alert.alert(
+        t("success"),
+        isArabic ? "تم حفظ البيانات بنجاح." : "Submission saved successfully."
+      );
 
       setForm(initialForm);
       setLatitude(null);
       setLongitude(null);
-    } catch (error) {
-      Alert.alert("Error", "Something went wrong while saving the form.");
+    } catch {
+      Alert.alert(
+        t("error"),
+        isArabic
+          ? "حدث خطأ أثناء حفظ البيانات."
+          : "Something went wrong while saving the form."
+      );
     } finally {
       setSubmitting(false);
     }
@@ -184,7 +226,7 @@ export default function HomeScreen() {
     return (
       <SafeAreaView style={styles.centerPage}>
         <ActivityIndicator size="large" color="#2563eb" />
-        <Text style={styles.loadingText}>Loading...</Text>
+        <Text style={styles.loadingText}>{t("loading")}</Text>
       </SafeAreaView>
     );
   }
@@ -199,112 +241,154 @@ export default function HomeScreen() {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.header}>
-            <View>
-              <Text style={styles.appName}>Fodica</Text>
-              <Text style={styles.subtitle}>Field Sales Submission</Text>
+          <View style={[styles.header, isArabic && styles.rowReverse]}>
+            <View style={isArabic && styles.alignRight}>
+              <Text style={[styles.appName, isArabic && styles.rtlText]}>
+                Fodica
+              </Text>
+              <Text style={[styles.subtitle, isArabic && styles.rtlText]}>
+                {t("appTagline")}
+              </Text>
             </View>
 
-            <Pressable style={styles.signOutButton} onPress={handleSignOut}>
-              <Text style={styles.signOutText}>Sign out</Text>
-            </Pressable>
+            <View style={styles.headerActions}>
+              <Pressable
+                onPress={toggleLanguage}
+                style={styles.languageButton}
+              >
+                <Text style={styles.languageButtonText}>
+                  {language === "en" ? "العربية" : "English"}
+                </Text>
+              </Pressable>
+
+              <Pressable style={styles.signOutButton} onPress={handleSignOut}>
+                <Text style={styles.signOutText}>{t("signOut")}</Text>
+              </Pressable>
+            </View>
           </View>
 
           {isAdmin && (
             <Pressable
-              style={styles.adminButton}
+              style={[styles.adminButton, isArabic && styles.rowReverseCenter]}
               onPress={() => router.push("/admin")}
             >
               <Shield size={18} color="#ffffff" />
-              <Text style={styles.adminButtonText}>Open Admin Dashboard</Text>
+              <Text style={styles.adminButtonText}>
+                {t("openAdminDashboard")}
+              </Text>
             </Pressable>
           )}
 
           <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Customer Details</Text>
+            <Text style={[styles.sectionTitle, isArabic && styles.rtlText]}>
+              {t("customerDetails")}
+            </Text>
 
             <AppInput
-              label="Customer Name"
+              label={t("customerName")}
               value={form.customerName}
               onChangeText={(value) => updateField("customerName", value)}
-              placeholder="Enter customer name"
+              placeholder={
+                isArabic ? "أدخل اسم العميل" : "Enter customer name"
+              }
+              isArabic={isArabic}
             />
 
             <AppInput
-              label="Invoice Number"
+              label={t("invoiceNumber")}
               value={form.invoiceNumber}
               onChangeText={(value) => updateField("invoiceNumber", value)}
-              placeholder="Enter invoice number"
+              placeholder={
+                isArabic ? "أدخل رقم الفاتورة" : "Enter invoice number"
+              }
+              isArabic={isArabic}
             />
 
             <AppInput
-              label="Phone"
+              label={t("phone")}
               value={form.phone}
               onChangeText={(value) => updateField("phone", value)}
-              placeholder="Enter phone number"
+              placeholder={
+                isArabic ? "أدخل رقم الهاتف" : "Enter phone number"
+              }
               keyboardType="phone-pad"
+              isArabic={isArabic}
             />
 
             <AppInput
-              label="Address"
+              label={t("address")}
               value={form.address}
               onChangeText={(value) => updateField("address", value)}
-              placeholder="Enter address"
+              placeholder={isArabic ? "أدخل العنوان" : "Enter address"}
               multiline
+              isArabic={isArabic}
             />
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Sales Data</Text>
+            <Text style={[styles.sectionTitle, isArabic && styles.rtlText]}>
+              {t("salesData")}
+            </Text>
 
             <AppInput
-              label="Sales Rep"
+              label={t("salesRep")}
               value={form.salesRep}
               onChangeText={(value) => updateField("salesRep", value)}
-              placeholder="Sales rep"
+              placeholder={t("salesRep")}
+              isArabic={isArabic}
             />
 
             <AppInput
-              label="Region"
+              label={t("region")}
               value={form.region}
               onChangeText={(value) => updateField("region", value)}
-              placeholder="Region"
+              placeholder={t("region")}
+              isArabic={isArabic}
             />
 
             <AppInput
-              label="District"
+              label={t("district")}
               value={form.district}
               onChangeText={(value) => updateField("district", value)}
-              placeholder="District"
+              placeholder={t("district")}
+              isArabic={isArabic}
             />
 
             <AppInput
-              label="Sector"
+              label={t("sector")}
               value={form.sector}
               onChangeText={(value) => updateField("sector", value)}
-              placeholder="Sector"
+              placeholder={t("sector")}
+              isArabic={isArabic}
             />
 
             <AppInput
-              label="Territory"
+              label={t("territory")}
               value={form.territory}
               onChangeText={(value) => updateField("territory", value)}
-              placeholder="Territory"
+              placeholder={t("territory")}
+              isArabic={isArabic}
             />
 
             <AppInput
-              label="Sales Team"
+              label={t("salesTeam")}
               value={form.salesTeam}
               onChangeText={(value) => updateField("salesTeam", value)}
-              placeholder="Sales team"
+              placeholder={t("salesTeam")}
+              isArabic={isArabic}
             />
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Location</Text>
+            <Text style={[styles.sectionTitle, isArabic && styles.rtlText]}>
+              {t("gpsLocation")}
+            </Text>
 
             <Pressable
-              style={styles.locationButton}
+              style={[
+                styles.locationButton,
+                isArabic && styles.rowReverseCenter,
+              ]}
               onPress={getCurrentLocation}
               disabled={gettingLocation}
             >
@@ -314,36 +398,44 @@ export default function HomeScreen() {
                 <>
                   <MapPin size={18} color="#ffffff" />
                   <Text style={styles.locationButtonText}>
-                    Capture Current Location
+                    {t("captureLocation")}
                   </Text>
                 </>
               )}
             </Pressable>
 
             <View style={styles.locationBox}>
-              <Text style={styles.locationText}>
-                Latitude: {latitude ?? "Not captured"}
+              <Text style={[styles.locationText, isArabic && styles.rtlText]}>
+                {t("latitude")}: {latitude ?? t("notCaptured")}
               </Text>
-              <Text style={styles.locationText}>
-                Longitude: {longitude ?? "Not captured"}
+
+              <Text style={[styles.locationText, isArabic && styles.rtlText]}>
+                {t("longitude")}: {longitude ?? t("notCaptured")}
               </Text>
             </View>
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Notes</Text>
+            <Text style={[styles.sectionTitle, isArabic && styles.rtlText]}>
+              {t("notes")}
+            </Text>
 
             <AppInput
-              label="Notes"
+              label={t("notes")}
               value={form.notes}
               onChangeText={(value) => updateField("notes", value)}
-              placeholder="Optional notes"
+              placeholder={isArabic ? "ملاحظات اختيارية" : "Optional notes"}
               multiline
+              isArabic={isArabic}
             />
           </View>
 
           <Pressable
-            style={[styles.submitButton, submitting && styles.disabledButton]}
+            style={[
+              styles.submitButton,
+              isArabic && styles.rowReverseCenter,
+              submitting && styles.disabledButton,
+            ]}
             onPress={submitForm}
             disabled={submitting}
           >
@@ -352,7 +444,7 @@ export default function HomeScreen() {
             ) : (
               <>
                 <Send size={18} color="#ffffff" />
-                <Text style={styles.submitButtonText}>Submit</Text>
+                <Text style={styles.submitButtonText}>{t("submit")}</Text>
               </>
             )}
           </Pressable>
@@ -369,6 +461,7 @@ function AppInput({
   placeholder,
   keyboardType,
   multiline,
+  isArabic,
 }: {
   label: string;
   value: string;
@@ -376,18 +469,25 @@ function AppInput({
   placeholder?: string;
   keyboardType?: "default" | "phone-pad" | "numeric" | "email-address";
   multiline?: boolean;
+  isArabic: boolean;
 }) {
   return (
     <View style={styles.inputGroup}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, isArabic && styles.rtlText]}>{label}</Text>
+
       <TextInput
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
         keyboardType={keyboardType}
         multiline={multiline}
-        style={[styles.input, multiline && styles.textarea]}
+        style={[
+          styles.input,
+          multiline && styles.textarea,
+          isArabic && styles.rtlInput,
+        ]}
         placeholderTextColor="#94a3b8"
+        textAlign={isArabic ? "right" : "left"}
       />
     </View>
   );
@@ -398,24 +498,29 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f1f5f9",
   },
+
   keyboardView: {
     flex: 1,
   },
+
   scrollContent: {
     padding: 16,
     paddingBottom: 40,
   },
+
   centerPage: {
     flex: 1,
     backgroundColor: "#f1f5f9",
     alignItems: "center",
     justifyContent: "center",
   },
+
   loadingText: {
     marginTop: 12,
     color: "#475569",
     fontSize: 14,
   },
+
   header: {
     backgroundColor: "#0f172a",
     borderRadius: 22,
@@ -424,28 +529,52 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: 12,
   },
+
+  headerActions: {
+    gap: 8,
+    alignItems: "flex-end",
+  },
+
   appName: {
     color: "#ffffff",
     fontSize: 26,
     fontWeight: "800",
   },
+
   subtitle: {
     color: "#cbd5e1",
     fontSize: 13,
     marginTop: 3,
   },
+
+  languageButton: {
+    backgroundColor: "rgba(255,255,255,0.12)",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+
+  languageButtonText: {
+    color: "#ffffff",
+    fontWeight: "800",
+    fontSize: 12,
+  },
+
   signOutButton: {
     backgroundColor: "rgba(255,255,255,0.12)",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
   },
+
   signOutText: {
     color: "#ffffff",
     fontWeight: "700",
     fontSize: 12,
   },
+
   adminButton: {
     height: 48,
     borderRadius: 14,
@@ -456,10 +585,12 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 14,
   },
+
   adminButtonText: {
     color: "#ffffff",
     fontWeight: "800",
   },
+
   card: {
     backgroundColor: "#ffffff",
     borderRadius: 18,
@@ -468,21 +599,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e2e8f0",
   },
+
   sectionTitle: {
     fontSize: 17,
     fontWeight: "800",
     color: "#0f172a",
     marginBottom: 14,
   },
+
   inputGroup: {
     marginBottom: 12,
   },
+
   label: {
     color: "#334155",
     fontSize: 13,
     fontWeight: "700",
     marginBottom: 6,
   },
+
   input: {
     minHeight: 48,
     borderWidth: 1,
@@ -492,11 +627,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     color: "#0f172a",
   },
+
   textarea: {
     minHeight: 90,
     paddingTop: 12,
     textAlignVertical: "top",
   },
+
   locationButton: {
     height: 50,
     borderRadius: 14,
@@ -506,10 +643,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
   },
+
   locationButtonText: {
     color: "#ffffff",
     fontWeight: "800",
   },
+
   locationBox: {
     marginTop: 12,
     padding: 12,
@@ -518,11 +657,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e2e8f0",
   },
+
   locationText: {
     color: "#475569",
     fontSize: 13,
     marginBottom: 4,
   },
+
   submitButton: {
     height: 54,
     borderRadius: 16,
@@ -532,12 +673,35 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
   },
+
   submitButtonText: {
     color: "#ffffff",
     fontSize: 16,
     fontWeight: "900",
   },
+
   disabledButton: {
     opacity: 0.65,
+  },
+
+  rtlText: {
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+
+  rtlInput: {
+    writingDirection: "rtl",
+  },
+
+  rowReverse: {
+    flexDirection: "row-reverse",
+  },
+
+  rowReverseCenter: {
+    flexDirection: "row-reverse",
+  },
+
+  alignRight: {
+    alignItems: "flex-end",
   },
 });

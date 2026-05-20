@@ -1,11 +1,15 @@
+import type { ReactNode } from "react";
 import {
   ActivityIndicator,
   Pressable,
   PressableProps,
+  StyleProp,
   StyleSheet,
   Text,
   ViewStyle,
 } from "react-native";
+
+import { useI18n } from "@/lib/i18n";
 
 type AppButtonVariant = "primary" | "secondary" | "danger" | "success" | "ghost";
 
@@ -15,8 +19,8 @@ type AppButtonProps = {
   loading?: boolean;
   disabled?: boolean;
   variant?: AppButtonVariant;
-  icon?: React.ReactNode;
-  style?: ViewStyle;
+  icon?: ReactNode;
+  style?: StyleProp<ViewStyle>;
 } & Omit<PressableProps, "onPress" | "disabled" | "style">;
 
 export function AppButton({
@@ -29,6 +33,8 @@ export function AppButton({
   style,
   ...props
 }: AppButtonProps) {
+  const { isArabic } = useI18n();
+
   const isDisabled = disabled || loading;
 
   return (
@@ -37,6 +43,7 @@ export function AppButton({
       disabled={isDisabled}
       style={[
         styles.button,
+        isArabic && styles.rowReverse,
         styles[variant],
         isDisabled && styles.disabled,
         style,
@@ -48,9 +55,11 @@ export function AppButton({
       ) : (
         <>
           {icon}
+
           <Text
             style={[
               styles.text,
+              isArabic && styles.rtlText,
               variant === "secondary" && styles.secondaryText,
               variant === "ghost" && styles.ghostText,
             ]}
@@ -72,6 +81,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flexDirection: "row",
     gap: 8,
+  },
+
+  rowReverse: {
+    flexDirection: "row-reverse",
   },
 
   primary: {
@@ -104,6 +117,11 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 15,
     fontWeight: "900",
+  },
+
+  rtlText: {
+    textAlign: "right",
+    writingDirection: "rtl",
   },
 
   secondaryText: {

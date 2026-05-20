@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -23,15 +23,16 @@ import {
 
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/useAuth";
+import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/lib/supabase";
 
 const masterTables = [
-  { key: "sales_reps", label: "Sales Reps" },
-  { key: "regions", label: "Regions" },
-  { key: "districts", label: "Districts" },
-  { key: "sectors", label: "Sectors" },
-  { key: "territories", label: "Territories" },
-  { key: "sales_teams", label: "Sales Teams" },
+  { key: "sales_reps" },
+  { key: "regions" },
+  { key: "districts" },
+  { key: "sectors" },
+  { key: "territories" },
+  { key: "sales_teams" },
 ] as const;
 
 type MasterTableKey = (typeof masterTables)[number]["key"];
@@ -45,6 +46,7 @@ type MasterItem = {
 
 export default function AdminMasterDataScreen() {
   const { user, isAdmin, loading } = useAuth();
+  const { t, isArabic } = useI18n();
 
   const [activeTable, setActiveTable] = useState<MasterTableKey>("sales_reps");
   const [items, setItems] = useState<MasterItem[]>([]);
@@ -56,9 +58,23 @@ export default function AdminMasterDataScreen() {
   const [code, setCode] = useState("");
   const [editingItem, setEditingItem] = useState<MasterItem | null>(null);
 
-  const activeLabel =
-    masterTables.find((table) => table.key === activeTable)?.label ||
-    "Master Data";
+  const tableLabels = useMemo<Record<MasterTableKey, string>>(
+    () => ({
+      sales_reps: isArabic ? "مندوبي المبيعات" : "Sales Reps",
+      regions: isArabic ? "المناطق" : "Regions",
+      districts: isArabic ? "الأحياء / الإدارات" : "Districts",
+      sectors: isArabic ? "القطاعات" : "Sectors",
+      territories: isArabic ? "النطاقات" : "Territories",
+      sales_teams: isArabic ? "فرق المبيعات" : "Sales Teams",
+    }),
+    [isArabic]
+  );
+
+  const activeLabel = tableLabels[activeTable];
+
+  const orderedMasterTables = useMemo(() => {
+    return isArabic ? [...masterTables].reverse() : masterTables;
+  }, [isArabic]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -67,10 +83,10 @@ export default function AdminMasterDataScreen() {
     }
 
     if (!loading && user && !isAdmin) {
-      Alert.alert("Access denied", "Admin access only.");
+      Alert.alert(t("accessDenied"), t("adminOnly"));
       router.replace("/");
     }
-  }, [loading, user, isAdmin]);
+  }, [loading, user, isAdmin, t]);
 
   useEffect(() => {
     if (user && isAdmin) {
@@ -89,13 +105,18 @@ export default function AdminMasterDataScreen() {
         .order("name", { ascending: true });
 
       if (error) {
-        Alert.alert("Load Error", error.message);
+        Alert.alert(isArabic ? "خطأ في التحميل" : "Load Error", error.message);
         return;
       }
 
       setItems((data ?? []) as MasterItem[]);
     } catch {
-      Alert.alert("Error", "Could not load master data.");
+      Alert.alert(
+        t("error"),
+        isArabic
+          ? "تعذر تحميل البيانات الأساسية."
+          : "Could not load master data."
+      );
     } finally {
       setBusy(false);
       setRefreshing(false);
@@ -124,7 +145,10 @@ export default function AdminMasterDataScreen() {
     const cleanCode = code.trim();
 
     if (!cleanName) {
-      Alert.alert("Missing Data", "Name is required.");
+      Alert.alert(
+        t("missingData"),
+        isArabic ? "الاسم مطلوب." : "Name is required."
+      );
       return;
     }
 
@@ -141,11 +165,14 @@ export default function AdminMasterDataScreen() {
           .eq("id", editingItem.id);
 
         if (error) {
-          Alert.alert("Update Failed", error.message);
+          Alert.alert(isArabic ? "فشل التحديث" : "Update Failed", error.message);
           return;
         }
 
-        Alert.alert("Done", "Item updated successfully.");
+        Alert.alert(
+          t("done"),
+          isArabic ? "تم تحديث العنصر بنجاح." : "Item updated successfully."
+        );
       } else {
         const { error } = await supabase.from(activeTable).insert({
           name: cleanName,
@@ -153,17 +180,25 @@ export default function AdminMasterDataScreen() {
         });
 
         if (error) {
-          Alert.alert("Add Failed", error.message);
+          Alert.alert(isArabic ? "فشل الإضافة" : "Add Failed", error.message);
           return;
         }
 
-        Alert.alert("Done", "Item added successfully.");
+        Alert.alert(
+          t("done"),
+          isArabic ? "تمت إضافة العنصر بنجاح." : "Item added successfully."
+        );
       }
 
       resetForm();
       await loadItems();
     } catch {
-      Alert.alert("Error", "Something went wrong while saving.");
+      Alert.alert(
+        t("error"),
+        isArabic
+          ? "حدث خطأ أثناء الحفظ."
+          : "Something went wrong while saving."
+      );
     } finally {
       setSaving(false);
     }
@@ -171,15 +206,17 @@ export default function AdminMasterDataScreen() {
 
   function confirmDelete(item: MasterItem) {
     Alert.alert(
-      "Delete Item",
-      `Are you sure you want to delete "${item.name}"?`,
+      isArabic ? "حذف العنصر" : "Delete Item",
+      isArabic
+        ? `هل أنت متأكد أنك تريد حذف "${item.name}"؟`
+        : `Are you sure you want to delete "${item.name}"?`,
       [
         {
-          text: "Cancel",
+          text: t("cancel"),
           style: "cancel",
         },
         {
-          text: "Delete",
+          text: t("delete"),
           style: "destructive",
           onPress: () => deleteItem(item),
         },
@@ -195,7 +232,7 @@ export default function AdminMasterDataScreen() {
         .eq("id", item.id);
 
       if (error) {
-        Alert.alert("Delete Failed", error.message);
+        Alert.alert(isArabic ? "فشل الحذف" : "Delete Failed", error.message);
         return;
       }
 
@@ -204,8 +241,18 @@ export default function AdminMasterDataScreen() {
       }
 
       await loadItems();
+
+      Alert.alert(
+        t("done"),
+        isArabic ? "تم حذف العنصر بنجاح." : "Item deleted successfully."
+      );
     } catch {
-      Alert.alert("Error", "Something went wrong while deleting.");
+      Alert.alert(
+        t("error"),
+        isArabic
+          ? "حدث خطأ أثناء الحذف."
+          : "Something went wrong while deleting."
+      );
     }
   }
 
@@ -214,7 +261,7 @@ export default function AdminMasterDataScreen() {
       <AppShell>
         <View style={styles.loadingBox}>
           <ActivityIndicator size="large" color="#2563eb" />
-          <Text style={styles.loadingText}>Loading master data...</Text>
+          <Text style={styles.loadingText}>{t("loadingMasterData")}</Text>
         </View>
       </AppShell>
     );
@@ -228,11 +275,16 @@ export default function AdminMasterDataScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <View style={styles.headerCard}>
-          <View>
-            <Text style={styles.pageTitle}>Master Data</Text>
-            <Text style={styles.pageSubtitle}>
-              Manage sales reps, regions, districts and teams
+        <View style={[styles.headerCard, isArabic && styles.rowReverse]}>
+          <View style={[styles.headerTextBox, isArabic && styles.alignRight]}>
+            <Text style={[styles.pageTitle, isArabic && styles.rtlText]}>
+              {t("masterData")}
+            </Text>
+
+            <Text style={[styles.pageSubtitle, isArabic && styles.rtlText]}>
+              {isArabic
+                ? "إدارة مندوبي المبيعات والمناطق والأحياء والفرق"
+                : "Manage sales reps, regions, districts and teams"}
             </Text>
           </View>
 
@@ -244,10 +296,13 @@ export default function AdminMasterDataScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabsContent}
+          contentContainerStyle={[
+            styles.tabsContent,
+            isArabic && styles.rowReverse,
+          ]}
           style={styles.tabs}
         >
-          {masterTables.map((table) => {
+          {orderedMasterTables.map((table) => {
             const active = table.key === activeTable;
 
             return (
@@ -257,7 +312,7 @@ export default function AdminMasterDataScreen() {
                 onPress={() => setActiveTable(table.key)}
               >
                 <Text style={[styles.tabText, active && styles.activeTabText]}>
-                  {table.label}
+                  {tableLabels[table.key]}
                 </Text>
               </Pressable>
             );
@@ -265,8 +320,8 @@ export default function AdminMasterDataScreen() {
         </ScrollView>
 
         <View style={styles.formCard}>
-          <View style={styles.formHeader}>
-            <View style={styles.formHeaderLeft}>
+          <View style={[styles.formHeader, isArabic && styles.rowReverse]}>
+            <View style={[styles.formHeaderLeft, isArabic && styles.rowReverse]}>
               <View style={styles.formIcon}>
                 {editingItem ? (
                   <Edit3 size={18} color="#ffffff" />
@@ -275,11 +330,22 @@ export default function AdminMasterDataScreen() {
                 )}
               </View>
 
-              <View>
-                <Text style={styles.sectionTitle}>
-                  {editingItem ? "Edit Item" : "Add New Item"}
+              <View style={isArabic && styles.alignRight}>
+                <Text style={[styles.sectionTitle, isArabic && styles.rtlText]}>
+                  {editingItem
+                    ? isArabic
+                      ? "تعديل عنصر"
+                      : "Edit Item"
+                    : isArabic
+                      ? "إضافة عنصر جديد"
+                      : "Add New Item"}
                 </Text>
-                <Text style={styles.sectionSubtitle}>{activeLabel}</Text>
+
+                <Text
+                  style={[styles.sectionSubtitle, isArabic && styles.rtlText]}
+                >
+                  {activeLabel}
+                </Text>
               </View>
             </View>
 
@@ -291,29 +357,41 @@ export default function AdminMasterDataScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Name</Text>
+            <Text style={[styles.label, isArabic && styles.rtlText]}>
+              {isArabic ? "الاسم" : "Name"}
+            </Text>
+
             <TextInput
               value={name}
               onChangeText={setName}
-              placeholder="Enter name"
+              placeholder={isArabic ? "أدخل الاسم" : "Enter name"}
               placeholderTextColor="#94a3b8"
-              style={styles.input}
+              style={[styles.input, isArabic && styles.rtlInput]}
+              textAlign={isArabic ? "right" : "left"}
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Code</Text>
+            <Text style={[styles.label, isArabic && styles.rtlText]}>
+              {isArabic ? "الكود" : "Code"}
+            </Text>
+
             <TextInput
               value={code}
               onChangeText={setCode}
-              placeholder="Optional code"
+              placeholder={isArabic ? "كود اختياري" : "Optional code"}
               placeholderTextColor="#94a3b8"
-              style={styles.input}
+              style={[styles.input, isArabic && styles.rtlInput]}
+              textAlign={isArabic ? "right" : "left"}
             />
           </View>
 
           <Pressable
-            style={[styles.saveButton, saving && styles.disabledButton]}
+            style={[
+              styles.saveButton,
+              isArabic && styles.rowReverseCenter,
+              saving && styles.disabledButton,
+            ]}
             onPress={saveItem}
             disabled={saving}
           >
@@ -323,7 +401,7 @@ export default function AdminMasterDataScreen() {
               <>
                 <Save size={18} color="#ffffff" />
                 <Text style={styles.saveButtonText}>
-                  {editingItem ? "Update" : "Add"}
+                  {editingItem ? t("update") : t("add")}
                 </Text>
               </>
             )}
@@ -331,11 +409,18 @@ export default function AdminMasterDataScreen() {
         </View>
 
         <View style={styles.listCard}>
-          <View style={styles.listHeader}>
-            <View>
-              <Text style={styles.sectionTitle}>{activeLabel}</Text>
-              <Text style={styles.sectionSubtitle}>
-                {items.length} item{items.length === 1 ? "" : "s"}
+          <View style={[styles.listHeader, isArabic && styles.rowReverse]}>
+            <View style={isArabic && styles.alignRight}>
+              <Text style={[styles.sectionTitle, isArabic && styles.rtlText]}>
+                {activeLabel}
+              </Text>
+
+              <Text
+                style={[styles.sectionSubtitle, isArabic && styles.rtlText]}
+              >
+                {isArabic
+                  ? `${items.length} عنصر`
+                  : `${items.length} item${items.length === 1 ? "" : "s"}`}
               </Text>
             </View>
 
@@ -344,25 +429,39 @@ export default function AdminMasterDataScreen() {
 
           {items.length === 0 ? (
             <View style={styles.emptyBox}>
-              <Text style={styles.emptyTitle}>No data yet</Text>
-              <Text style={styles.emptyText}>
-                Add your first item using the form above.
+              <Text style={[styles.emptyTitle, isArabic && styles.rtlText]}>
+                {isArabic ? "لا توجد بيانات بعد" : "No data yet"}
+              </Text>
+
+              <Text style={[styles.emptyText, isArabic && styles.rtlText]}>
+                {isArabic
+                  ? "أضف أول عنصر باستخدام النموذج بالأعلى."
+                  : "Add your first item using the form above."}
               </Text>
             </View>
           ) : (
             items.map((item) => (
-              <View key={item.id} style={styles.itemCard}>
+              <View
+                key={item.id}
+                style={[styles.itemCard, isArabic && styles.rowReverse]}
+              >
                 <View style={styles.itemInfo}>
-                  <Text style={styles.itemName} numberOfLines={1}>
+                  <Text
+                    style={[styles.itemName, isArabic && styles.rtlText]}
+                    numberOfLines={1}
+                  >
                     {item.name}
                   </Text>
 
-                  <Text style={styles.itemCode} numberOfLines={1}>
-                    Code: {item.code || "—"}
+                  <Text
+                    style={[styles.itemCode, isArabic && styles.rtlText]}
+                    numberOfLines={1}
+                  >
+                    {isArabic ? "الكود" : "Code"}: {item.code || "—"}
                   </Text>
                 </View>
 
-                <View style={styles.itemActions}>
+                <View style={[styles.itemActions, isArabic && styles.rowReverse]}>
                   <Pressable
                     style={styles.editButton}
                     onPress={() => startEdit(item)}
@@ -392,11 +491,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
   loadingText: {
     marginTop: 12,
     color: "#475569",
     fontSize: 14,
   },
+
   headerCard: {
     backgroundColor: "#0f172a",
     borderRadius: 22,
@@ -405,18 +506,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: 12,
   },
+
+  headerTextBox: {
+    flex: 1,
+  },
+
   pageTitle: {
     color: "#ffffff",
     fontSize: 24,
     fontWeight: "900",
   },
+
   pageSubtitle: {
     color: "#cbd5e1",
     fontSize: 13,
     marginTop: 4,
     maxWidth: 240,
   },
+
   refreshButton: {
     width: 42,
     height: 42,
@@ -425,12 +534,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
   tabs: {
     marginBottom: 14,
   },
+
   tabsContent: {
     gap: 8,
   },
+
   tab: {
     height: 38,
     paddingHorizontal: 14,
@@ -441,18 +553,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
   activeTab: {
     backgroundColor: "#2563eb",
     borderColor: "#2563eb",
   },
+
   tabText: {
     color: "#64748b",
     fontSize: 12,
     fontWeight: "800",
   },
+
   activeTabText: {
     color: "#ffffff",
   },
+
   formCard: {
     backgroundColor: "#ffffff",
     borderRadius: 18,
@@ -461,17 +577,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e2e8f0",
   },
+
   formHeader: {
     marginBottom: 14,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
+
   formHeaderLeft: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
   },
+
   formIcon: {
     width: 40,
     height: 40,
@@ -480,6 +599,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
   cancelEditButton: {
     width: 34,
     height: 34,
@@ -490,25 +610,30 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
   sectionTitle: {
     color: "#0f172a",
     fontSize: 17,
     fontWeight: "900",
   },
+
   sectionSubtitle: {
     color: "#64748b",
     fontSize: 12,
     marginTop: 2,
   },
+
   inputGroup: {
     marginBottom: 12,
   },
+
   label: {
     color: "#334155",
     fontSize: 13,
     fontWeight: "800",
     marginBottom: 6,
   },
+
   input: {
     minHeight: 48,
     borderWidth: 1,
@@ -519,6 +644,7 @@ const styles = StyleSheet.create({
     color: "#0f172a",
     fontSize: 14,
   },
+
   saveButton: {
     height: 50,
     borderRadius: 14,
@@ -529,14 +655,17 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 4,
   },
+
   saveButtonText: {
     color: "#ffffff",
     fontWeight: "900",
     fontSize: 15,
   },
+
   disabledButton: {
     opacity: 0.65,
   },
+
   listCard: {
     backgroundColor: "#ffffff",
     borderRadius: 18,
@@ -545,27 +674,32 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e2e8f0",
   },
+
   listHeader: {
     marginBottom: 12,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
+
   emptyBox: {
     paddingVertical: 30,
     alignItems: "center",
   },
+
   emptyTitle: {
     color: "#0f172a",
     fontSize: 15,
     fontWeight: "900",
   },
+
   emptyText: {
     color: "#64748b",
     fontSize: 13,
     marginTop: 4,
     textAlign: "center",
   },
+
   itemCard: {
     minHeight: 70,
     borderRadius: 14,
@@ -579,23 +713,28 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 10,
   },
+
   itemInfo: {
     flex: 1,
   },
+
   itemName: {
     color: "#0f172a",
     fontSize: 15,
     fontWeight: "900",
   },
+
   itemCode: {
     color: "#64748b",
     fontSize: 12,
     marginTop: 5,
   },
+
   itemActions: {
     flexDirection: "row",
     gap: 8,
   },
+
   editButton: {
     width: 36,
     height: 36,
@@ -604,6 +743,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
   deleteButton: {
     width: 36,
     height: 36,
@@ -611,5 +751,26 @@ const styles = StyleSheet.create({
     backgroundColor: "#fee2e2",
     alignItems: "center",
     justifyContent: "center",
+  },
+
+  rtlText: {
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+
+  rtlInput: {
+    writingDirection: "rtl",
+  },
+
+  rowReverse: {
+    flexDirection: "row-reverse",
+  },
+
+  rowReverseCenter: {
+    flexDirection: "row-reverse",
+  },
+
+  alignRight: {
+    alignItems: "flex-end",
   },
 });

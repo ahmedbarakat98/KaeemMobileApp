@@ -7,6 +7,8 @@ import {
   View,
 } from "react-native";
 
+import { useI18n } from "@/lib/i18n";
+
 type AppInputProps = {
   label: string;
   value: string;
@@ -40,9 +42,11 @@ export function AppInput({
   disabled = false,
   ...props
 }: AppInputProps) {
+  const { isArabic } = useI18n();
+
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, isArabic && styles.rtlText]}>{label}</Text>
 
       <TextInput
         value={value}
@@ -53,16 +57,22 @@ export function AppInput({
         keyboardType={keyboardType}
         secureTextEntry={secureTextEntry}
         editable={!disabled}
+        textAlign={isArabic ? "right" : "left"}
         style={[
           styles.input,
           multiline && styles.textarea,
+          isArabic && styles.rtlInput,
           error && styles.inputError,
           disabled && styles.disabled,
         ]}
         {...props}
       />
 
-      {!!error && <Text style={styles.errorText}>{error}</Text>}
+      {!!error && (
+        <Text style={[styles.errorText, isArabic && styles.rtlText]}>
+          {error}
+        </Text>
+      )}
     </View>
   );
 }
@@ -71,12 +81,14 @@ const styles = StyleSheet.create({
   wrapper: {
     marginBottom: 12,
   },
+
   label: {
     color: "#334155",
     fontSize: 13,
     fontWeight: "800",
     marginBottom: 6,
   },
+
   input: {
     minHeight: 48,
     borderWidth: 1,
@@ -87,22 +99,35 @@ const styles = StyleSheet.create({
     color: "#0f172a",
     fontSize: 14,
   },
+
   textarea: {
     minHeight: 90,
     paddingTop: 12,
     textAlignVertical: "top",
   },
+
   inputError: {
     borderColor: "#dc2626",
   },
+
   disabled: {
     backgroundColor: "#f1f5f9",
     color: "#94a3b8",
   },
+
   errorText: {
     color: "#dc2626",
     fontSize: 12,
     fontWeight: "600",
     marginTop: 5,
+  },
+
+  rtlText: {
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+
+  rtlInput: {
+    writingDirection: "rtl",
   },
 });

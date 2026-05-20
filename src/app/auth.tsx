@@ -1,4 +1,5 @@
 import { useState } from "react";
+
 import {
   ActivityIndicator,
   Alert,
@@ -14,9 +15,11 @@ import { router } from "expo-router";
 import { MapPin } from "lucide-react-native";
 
 import { useAuth } from "@/hooks/useAuth";
+import { useI18n } from "@/lib/i18n";
 
 export default function AuthScreen() {
   const { signIn } = useAuth();
+  const { t, language, isArabic, toggleLanguage } = useI18n();
 
   const [usernameOrEmail, setUsernameOrEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,12 +27,20 @@ export default function AuthScreen() {
 
   async function onSubmit() {
     if (!usernameOrEmail.trim()) {
-      Alert.alert("Error", "Username or email is required.");
+      Alert.alert(
+        t("error"),
+        isArabic
+          ? "اسم المستخدم أو البريد الإلكتروني مطلوب."
+          : "Username or email is required."
+      );
       return;
     }
 
     if (!password.trim()) {
-      Alert.alert("Error", "Password is required.");
+      Alert.alert(
+        t("error"),
+        isArabic ? "كلمة المرور مطلوبة." : "Password is required."
+      );
       return;
     }
 
@@ -39,13 +50,16 @@ export default function AuthScreen() {
       const result = await signIn(usernameOrEmail, password);
 
       if (result.error) {
-        Alert.alert("Login failed", result.error.message);
+        Alert.alert(t("loginFailed"), result.error.message);
         return;
       }
 
       router.replace("/");
     } catch {
-      Alert.alert("Error", "Something went wrong.");
+      Alert.alert(
+        t("error"),
+        isArabic ? "حدث خطأ غير متوقع." : "Something went wrong."
+      );
     } finally {
       setBusy(false);
     }
@@ -57,31 +71,48 @@ export default function AuthScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View style={styles.card}>
+        <Pressable onPress={toggleLanguage} style={styles.languageButton}>
+          <Text style={styles.languageButtonText}>
+            {language === "en" ? "العربية" : "English"}
+          </Text>
+        </Pressable>
+
         <View style={styles.logo}>
           <MapPin size={32} color="#ffffff" />
         </View>
 
-        <Text style={styles.title}>Kaeem Mobile App</Text>
-        <Text style={styles.subtitle}>Sign in to continue</Text>
+        <Text style={styles.title}>{t("appName")}</Text>
 
-        <Text style={styles.label}>Username or Email</Text>
+        <Text style={styles.subtitle}>{t("welcomeBack")}</Text>
+
+        <Text style={[styles.label, isArabic && styles.rtlText]}>
+          {t("usernameOrEmail")}
+        </Text>
+
         <TextInput
           value={usernameOrEmail}
           onChangeText={setUsernameOrEmail}
-          placeholder=" email@example.com"
+          placeholder="email@example.com"
           placeholderTextColor="#94a3b8"
           autoCapitalize="none"
-          style={styles.input}
+          autoCorrect={false}
+          keyboardType="email-address"
+          style={[styles.input, isArabic && styles.rtlInput]}
+          textAlign={isArabic ? "right" : "left"}
         />
 
-        <Text style={styles.label}>Password</Text>
+        <Text style={[styles.label, isArabic && styles.rtlText]}>
+          {t("password")}
+        </Text>
+
         <TextInput
           value={password}
           onChangeText={setPassword}
-          placeholder="Password"
+          placeholder={t("password")}
           placeholderTextColor="#94a3b8"
           secureTextEntry
-          style={styles.input}
+          style={[styles.input, isArabic && styles.rtlInput]}
+          textAlign={isArabic ? "right" : "left"}
         />
 
         <Pressable
@@ -92,7 +123,7 @@ export default function AuthScreen() {
           {busy ? (
             <ActivityIndicator color="#ffffff" />
           ) : (
-            <Text style={styles.buttonText}>Sign in</Text>
+            <Text style={styles.buttonText}>{t("signIn")}</Text>
           )}
         </Pressable>
 
@@ -101,11 +132,11 @@ export default function AuthScreen() {
           style={styles.signupButton}
         >
           <Text style={styles.signupText}>
-            Don't have an account? Create account
+            {t("noAccount")} {t("createAccount")}
           </Text>
         </Pressable>
 
-        <Text style={styles.hint}>Admin login: admin / admin</Text>
+        <Text style={styles.hint}>{t("adminLoginHint")}</Text>
       </View>
     </KeyboardAvoidingView>
   );
@@ -118,11 +149,29 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 20,
   },
+
   card: {
     backgroundColor: "#ffffff",
     borderRadius: 24,
     padding: 20,
   },
+
+  languageButton: {
+    alignSelf: "flex-end",
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    marginBottom: 10,
+  },
+
+  languageButtonText: {
+    color: "#2563eb",
+    fontSize: 13,
+    fontWeight: "900",
+  },
+
   logo: {
     width: 60,
     height: 60,
@@ -133,12 +182,14 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginBottom: 12,
   },
+
   title: {
     fontSize: 24,
     fontWeight: "900",
     color: "#0f172a",
     textAlign: "center",
   },
+
   subtitle: {
     fontSize: 14,
     color: "#64748b",
@@ -146,12 +197,19 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 22,
   },
+
   label: {
     fontSize: 13,
     fontWeight: "800",
     color: "#334155",
     marginBottom: 6,
   },
+
+  rtlText: {
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+
   input: {
     minHeight: 48,
     borderWidth: 1,
@@ -161,6 +219,11 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     color: "#0f172a",
   },
+
+  rtlInput: {
+    writingDirection: "rtl",
+  },
+
   button: {
     height: 50,
     borderRadius: 14,
@@ -169,24 +232,29 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: 6,
   },
+
   disabled: {
     opacity: 0.65,
   },
+
   buttonText: {
     color: "#ffffff",
     fontSize: 16,
     fontWeight: "900",
   },
+
   signupButton: {
     marginTop: 16,
     alignItems: "center",
   },
+
   signupText: {
     color: "#2563eb",
     fontSize: 13,
     fontWeight: "900",
     textAlign: "center",
   },
+
   hint: {
     marginTop: 14,
     color: "#64748b",

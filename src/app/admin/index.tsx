@@ -21,7 +21,9 @@ import {
 
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/useAuth";
+import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/lib/supabase";
+import { AppLoader } from "@/components/AppLoader";
 
 type RecentSubmission = {
   id: string;
@@ -55,6 +57,7 @@ const initialStats: Stats = {
 
 export default function AdminOverviewScreen() {
   const { user, isAdmin, loading } = useAuth();
+  const { t, language, isArabic } = useI18n();
 
   const [stats, setStats] = useState<Stats>(initialStats);
   const [recentSubmissions, setRecentSubmissions] = useState<RecentSubmission[]>(
@@ -70,10 +73,10 @@ export default function AdminOverviewScreen() {
     }
 
     if (!loading && user && !isAdmin) {
-      Alert.alert("Access denied", "Admin access only.");
+      Alert.alert(t("accessDenied"), t("adminOnly"));
       router.replace("/");
     }
-  }, [loading, user, isAdmin]);
+  }, [loading, user, isAdmin, t]);
 
   async function loadDashboard() {
     try {
@@ -155,8 +158,11 @@ export default function AdminOverviewScreen() {
       setRecentSubmissions((recentRes.data ?? []) as RecentSubmission[]);
     } catch (error: any) {
       Alert.alert(
-        "Dashboard Error",
-        error?.message || "Could not load dashboard data."
+        isArabic ? "خطأ في لوحة التحكم" : "Dashboard Error",
+        error?.message ||
+          (isArabic
+            ? "تعذر تحميل بيانات لوحة التحكم."
+            : "Could not load dashboard data.")
       );
     } finally {
       setBusy(false);
@@ -181,8 +187,9 @@ export default function AdminOverviewScreen() {
     return (
       <AppShell>
         <View style={styles.loadingBox}>
-          <ActivityIndicator size="large" color="#2563eb" />
-          <Text style={styles.loadingText}>Loading dashboard...</Text>
+          <AppLoader text={t("loadingDashboard")} />
+          {/* <ActivityIndicator size="large" color="#2563eb" />
+          <Text style={styles.loadingText}>{t("loadingDashboard")}</Text> */}
         </View>
       </AppShell>
     );
@@ -196,11 +203,16 @@ export default function AdminOverviewScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <View style={styles.headerCard}>
-          <View>
-            <Text style={styles.pageTitle}>Admin Dashboard</Text>
-            <Text style={styles.pageSubtitle}>
-              Overview for submissions and master data
+        <View style={[styles.headerCard, isArabic && styles.rowReverse]}>
+          <View style={isArabic && styles.alignRight}>
+            <Text style={[styles.pageTitle, isArabic && styles.rtlText]}>
+              {t("adminDashboard")}
+            </Text>
+
+            <Text style={[styles.pageSubtitle, isArabic && styles.rtlText]}>
+              {isArabic
+                ? "نظرة عامة على الإدخالات والبيانات الأساسية"
+                : "Overview for submissions and master data"}
             </Text>
           </View>
 
@@ -209,30 +221,33 @@ export default function AdminOverviewScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.statsGrid}>
+        <View style={[styles.statsGrid, isArabic && styles.rowReverse]}>
           <StatCard
-            title="Submissions"
+            title={t("submissions")}
             value={stats.submissions}
             icon={ClipboardList}
             color="#2563eb"
+            isArabic={isArabic}
           />
 
           <StatCard
-            title="Sales Reps"
+            title={t("salesRep")}
             value={stats.salesReps}
             icon={Users}
             color="#16a34a"
+            isArabic={isArabic}
           />
 
           <StatCard
-            title="Regions"
+            title={t("region")}
             value={stats.regions}
             icon={MapPin}
             color="#ea580c"
+            isArabic={isArabic}
           />
 
           <StatCard
-            title="Master Tables"
+            title={isArabic ? "جداول البيانات" : "Master Tables"}
             value={
               stats.regions +
               stats.districts +
@@ -242,54 +257,69 @@ export default function AdminOverviewScreen() {
             }
             icon={Database}
             color="#7c3aed"
+            isArabic={isArabic}
           />
         </View>
 
         <View style={styles.actionsCard}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <Text style={[styles.sectionTitle, isArabic && styles.rtlText]}>
+            {isArabic ? "إجراءات سريعة" : "Quick Actions"}
+          </Text>
 
           <View style={styles.actionsGrid}>
             <ActionButton
-              title="Submissions"
-              subtitle="View all records"
+              title={t("submissions")}
+              subtitle={isArabic ? "عرض كل السجلات" : "View all records"}
               icon={ClipboardList}
               onPress={() => router.push("/admin/submissions")}
+              isArabic={isArabic}
             />
 
             <ActionButton
-              title="Master Data"
-              subtitle="Manage lists"
+              title={t("masterData")}
+              subtitle={isArabic ? "إدارة القوائم" : "Manage lists"}
               icon={Database}
               onPress={() => router.push("/admin/master-data")}
+              isArabic={isArabic}
             />
 
             <ActionButton
-              title="Sales Form"
-              subtitle="Create record"
+              title={t("salesForm")}
+              subtitle={isArabic ? "إنشاء سجل جديد" : "Create record"}
               icon={FileText}
               onPress={() => router.push("/")}
+              isArabic={isArabic}
             />
           </View>
         </View>
 
         <View style={styles.card}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Submissions</Text>
+          <View style={[styles.sectionHeader, isArabic && styles.rowReverse]}>
+            <Text style={[styles.sectionTitle, isArabic && styles.rtlText]}>
+              {isArabic ? "آخر الإدخالات" : "Recent Submissions"}
+            </Text>
 
             <Pressable onPress={() => router.push("/admin/submissions")}>
-              <Text style={styles.viewAllText}>View all</Text>
+              <Text style={styles.viewAllText}>
+                {isArabic ? "عرض الكل" : "View all"}
+              </Text>
             </Pressable>
           </View>
 
           {recentSubmissions.length === 0 ? (
             <View style={styles.emptyBox}>
-              <Text style={styles.emptyText}>No submissions yet.</Text>
+              <Text style={[styles.emptyText, isArabic && styles.rtlText]}>
+                {isArabic ? "لا توجد إدخالات حتى الآن." : "No submissions yet."}
+              </Text>
             </View>
           ) : (
             recentSubmissions.map((item) => (
               <View key={item.id} style={styles.submissionItem}>
-                <View style={styles.submissionTop}>
-                  <Text style={styles.customerName} numberOfLines={1}>
+                <View style={[styles.submissionTop, isArabic && styles.rowReverse]}>
+                  <Text
+                    style={[styles.customerName, isArabic && styles.rtlText]}
+                    numberOfLines={1}
+                  >
                     {item.customer_name}
                   </Text>
 
@@ -298,17 +328,24 @@ export default function AdminOverviewScreen() {
                   </Text>
                 </View>
 
-                <Text style={styles.submissionMeta} numberOfLines={1}>
-                  Phone: {item.phone}
+                <Text
+                  style={[styles.submissionMeta, isArabic && styles.rtlText]}
+                  numberOfLines={1}
+                >
+                  {t("phone")}: {item.phone}
                 </Text>
 
-                <Text style={styles.submissionMeta} numberOfLines={1}>
-                  {item.sales_rep || "No sales rep"} •{" "}
-                  {item.region || "No region"}
+                <Text
+                  style={[styles.submissionMeta, isArabic && styles.rtlText]}
+                  numberOfLines={1}
+                >
+                  {item.sales_rep ||
+                    (isArabic ? "لا يوجد مندوب مبيعات" : "No sales rep")}{" "}
+                  • {item.region || (isArabic ? "لا توجد منطقة" : "No region")}
                 </Text>
 
-                <Text style={styles.submissionDate}>
-                  {formatDate(item.created_at)}
+                <Text style={[styles.submissionDate, isArabic && styles.rtlText]}>
+                  {formatDate(item.created_at, language)}
                 </Text>
               </View>
             ))
@@ -316,12 +353,22 @@ export default function AdminOverviewScreen() {
         </View>
 
         <View style={styles.masterSummary}>
-          <Text style={styles.sectionTitle}>Master Data Summary</Text>
+          <Text style={[styles.sectionTitle, isArabic && styles.rtlText]}>
+            {isArabic ? "ملخص البيانات الأساسية" : "Master Data Summary"}
+          </Text>
 
-          <SummaryRow label="Districts" value={stats.districts} />
-          <SummaryRow label="Sectors" value={stats.sectors} />
-          <SummaryRow label="Territories" value={stats.territories} />
-          <SummaryRow label="Sales Teams" value={stats.salesTeams} />
+          <SummaryRow label={t("district")} value={stats.districts} isArabic={isArabic} />
+          <SummaryRow label={t("sector")} value={stats.sectors} isArabic={isArabic} />
+          <SummaryRow
+            label={t("territory")}
+            value={stats.territories}
+            isArabic={isArabic}
+          />
+          <SummaryRow
+            label={t("salesTeam")}
+            value={stats.salesTeams}
+            isArabic={isArabic}
+          />
         </View>
       </ScrollView>
     </AppShell>
@@ -333,11 +380,13 @@ function StatCard({
   value,
   icon: Icon,
   color,
+  isArabic,
 }: {
   title: string;
   value: number;
   icon: any;
   color: string;
+  isArabic: boolean;
 }) {
   return (
     <View style={styles.statCard}>
@@ -345,8 +394,13 @@ function StatCard({
         <Icon size={20} color="#ffffff" />
       </View>
 
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statTitle}>{title}</Text>
+      <Text style={[styles.statValue, isArabic && styles.rtlText]}>
+        {value}
+      </Text>
+
+      <Text style={[styles.statTitle, isArabic && styles.rtlText]}>
+        {title}
+      </Text>
     </View>
   );
 }
@@ -356,40 +410,59 @@ function ActionButton({
   subtitle,
   icon: Icon,
   onPress,
+  isArabic,
 }: {
   title: string;
   subtitle: string;
   icon: any;
   onPress: () => void;
+  isArabic: boolean;
 }) {
   return (
-    <Pressable style={styles.actionButton} onPress={onPress}>
+    <Pressable
+      style={[styles.actionButton, isArabic && styles.rowReverse]}
+      onPress={onPress}
+    >
       <View style={styles.actionIcon}>
         <Icon size={18} color="#2563eb" />
       </View>
 
       <View style={styles.actionTextBox}>
-        <Text style={styles.actionTitle}>{title}</Text>
-        <Text style={styles.actionSubtitle}>{subtitle}</Text>
+        <Text style={[styles.actionTitle, isArabic && styles.rtlText]}>
+          {title}
+        </Text>
+        <Text style={[styles.actionSubtitle, isArabic && styles.rtlText]}>
+          {subtitle}
+        </Text>
       </View>
     </Pressable>
   );
 }
 
-function SummaryRow({ label, value }: { label: string; value: number }) {
+function SummaryRow({
+  label,
+  value,
+  isArabic,
+}: {
+  label: string;
+  value: number;
+  isArabic: boolean;
+}) {
   return (
-    <View style={styles.summaryRow}>
-      <Text style={styles.summaryLabel}>{label}</Text>
+    <View style={[styles.summaryRow, isArabic && styles.rowReverse]}>
+      <Text style={[styles.summaryLabel, isArabic && styles.rtlText]}>
+        {label}
+      </Text>
       <Text style={styles.summaryValue}>{value}</Text>
     </View>
   );
 }
 
-function formatDate(value: string) {
+function formatDate(value: string, language: "en" | "ar") {
   try {
     const date = new Date(value);
 
-    return date.toLocaleDateString(undefined, {
+    return date.toLocaleDateString(language === "ar" ? "ar-EG" : "en-EG", {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -405,11 +478,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
   loadingText: {
     marginTop: 12,
     color: "#475569",
     fontSize: 14,
   },
+
   headerCard: {
     backgroundColor: "#0f172a",
     borderRadius: 22,
@@ -418,17 +493,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: 12,
   },
+
   pageTitle: {
     color: "#ffffff",
     fontSize: 24,
     fontWeight: "900",
   },
+
   pageSubtitle: {
     color: "#cbd5e1",
     fontSize: 13,
     marginTop: 4,
   },
+
   refreshButton: {
     width: 42,
     height: 42,
@@ -437,12 +516,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
   statsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 12,
     marginBottom: 14,
   },
+
   statCard: {
     width: "48%",
     backgroundColor: "#ffffff",
@@ -451,6 +532,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e2e8f0",
   },
+
   statIcon: {
     width: 38,
     height: 38,
@@ -459,17 +541,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 12,
   },
+
   statValue: {
     fontSize: 26,
     fontWeight: "900",
     color: "#0f172a",
   },
+
   statTitle: {
     color: "#64748b",
     fontSize: 12,
     fontWeight: "700",
     marginTop: 2,
   },
+
   actionsCard: {
     backgroundColor: "#ffffff",
     borderRadius: 18,
@@ -478,10 +563,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e2e8f0",
   },
+
   actionsGrid: {
     gap: 10,
     marginTop: 12,
   },
+
   actionButton: {
     minHeight: 64,
     borderRadius: 14,
@@ -493,6 +580,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
+
   actionIcon: {
     width: 38,
     height: 38,
@@ -501,19 +589,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
   actionTextBox: {
     flex: 1,
   },
+
   actionTitle: {
     color: "#0f172a",
     fontSize: 14,
     fontWeight: "900",
   },
+
   actionSubtitle: {
     color: "#64748b",
     fontSize: 12,
     marginTop: 2,
   },
+
   card: {
     backgroundColor: "#ffffff",
     borderRadius: 18,
@@ -522,60 +614,72 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e2e8f0",
   },
+
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
+
   sectionTitle: {
     fontSize: 17,
     fontWeight: "900",
     color: "#0f172a",
   },
+
   viewAllText: {
     color: "#2563eb",
     fontSize: 13,
     fontWeight: "800",
   },
+
   emptyBox: {
     paddingVertical: 24,
     alignItems: "center",
   },
+
   emptyText: {
     color: "#64748b",
     fontSize: 14,
   },
+
   submissionItem: {
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#e2e8f0",
   },
+
   submissionTop: {
     flexDirection: "row",
     justifyContent: "space-between",
     gap: 8,
   },
+
   customerName: {
     flex: 1,
     color: "#0f172a",
     fontSize: 14,
     fontWeight: "900",
   },
+
   invoiceNumber: {
     color: "#2563eb",
     fontSize: 12,
     fontWeight: "800",
   },
+
   submissionMeta: {
     color: "#64748b",
     fontSize: 12,
     marginTop: 5,
   },
+
   submissionDate: {
     color: "#94a3b8",
     fontSize: 11,
     marginTop: 6,
   },
+
   masterSummary: {
     backgroundColor: "#ffffff",
     borderRadius: 18,
@@ -584,6 +688,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e2e8f0",
   },
+
   summaryRow: {
     minHeight: 42,
     borderBottomWidth: 1,
@@ -592,14 +697,29 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+
   summaryLabel: {
     color: "#475569",
     fontSize: 14,
     fontWeight: "700",
   },
+
   summaryValue: {
     color: "#0f172a",
     fontSize: 15,
     fontWeight: "900",
+  },
+
+  rtlText: {
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+
+  rowReverse: {
+    flexDirection: "row-reverse",
+  },
+
+  alignRight: {
+    alignItems: "flex-end",
   },
 });

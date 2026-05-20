@@ -25,6 +25,7 @@ import {
 
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/useAuth";
+import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/lib/supabase";
 
 type Submission = {
@@ -47,9 +48,9 @@ type Submission = {
   created_at: string;
 };
 
-function formatDate(value: string) {
+function formatDate(value: string, language: "en" | "ar") {
   try {
-    return new Intl.DateTimeFormat("en-EG", {
+    return new Intl.DateTimeFormat(language === "ar" ? "ar-EG" : "en-EG", {
       year: "numeric",
       month: "short",
       day: "2-digit",
@@ -63,6 +64,7 @@ function formatDate(value: string) {
 
 export default function AdminSubmissionsScreen() {
   const { user, isAdmin, loading } = useAuth();
+  const { t, language, isArabic } = useI18n();
 
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [busy, setBusy] = useState(true);
@@ -76,10 +78,10 @@ export default function AdminSubmissionsScreen() {
     }
 
     if (!loading && user && !isAdmin) {
-      Alert.alert("Access denied", "Admin access only.");
+      Alert.alert(t("accessDenied"), t("adminOnly"));
       router.replace("/");
     }
-  }, [loading, user, isAdmin]);
+  }, [loading, user, isAdmin, t]);
 
   async function loadSubmissions() {
     try {
@@ -93,13 +95,16 @@ export default function AdminSubmissionsScreen() {
         .order("created_at", { ascending: false });
 
       if (error) {
-        Alert.alert("Load Error", error.message);
+        Alert.alert(isArabic ? "خطأ في التحميل" : "Load Error", error.message);
         return;
       }
 
       setSubmissions((data ?? []) as Submission[]);
     } catch {
-      Alert.alert("Error", "Could not load submissions.");
+      Alert.alert(
+        t("error"),
+        isArabic ? "تعذر تحميل البيانات." : "Could not load submissions."
+      );
     } finally {
       setBusy(false);
       setRefreshing(false);
@@ -148,7 +153,12 @@ export default function AdminSubmissionsScreen() {
 
   async function openMap(item: Submission) {
     if (item.latitude === null || item.longitude === null) {
-      Alert.alert("No Location", "This submission does not include GPS coordinates.");
+      Alert.alert(
+        isArabic ? "لا يوجد موقع" : "No Location",
+        isArabic
+          ? "هذا الإدخال لا يحتوي على إحداثيات GPS."
+          : "This submission does not include GPS coordinates."
+      );
       return;
     }
 
@@ -156,7 +166,10 @@ export default function AdminSubmissionsScreen() {
     const supported = await Linking.canOpenURL(url);
 
     if (!supported) {
-      Alert.alert("Error", "Could not open map link.");
+      Alert.alert(
+        t("error"),
+        isArabic ? "تعذر فتح رابط الخريطة." : "Could not open map link."
+      );
       return;
     }
 
@@ -165,12 +178,14 @@ export default function AdminSubmissionsScreen() {
 
   function confirmDelete(item: Submission) {
     Alert.alert(
-      "Delete Submission",
-      `Are you sure you want to delete submission for "${item.customer_name}"?`,
+      isArabic ? "حذف الإدخال" : "Delete Submission",
+      isArabic
+        ? `هل أنت متأكد أنك تريد حذف إدخال العميل "${item.customer_name}"؟`
+        : `Are you sure you want to delete submission for "${item.customer_name}"?`,
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: t("delete"),
           style: "destructive",
           onPress: () => deleteSubmission(item.id),
         },
@@ -183,14 +198,23 @@ export default function AdminSubmissionsScreen() {
       const { error } = await supabase.from("submissions").delete().eq("id", id);
 
       if (error) {
-        Alert.alert("Delete Failed", error.message);
+        Alert.alert(isArabic ? "فشل الحذف" : "Delete Failed", error.message);
         return;
       }
 
       setSubmissions((current) => current.filter((item) => item.id !== id));
-      Alert.alert("Done", "Submission deleted successfully.");
+
+      Alert.alert(
+        t("done"),
+        isArabic ? "تم حذف الإدخال بنجاح." : "Submission deleted successfully."
+      );
     } catch {
-      Alert.alert("Error", "Something went wrong while deleting.");
+      Alert.alert(
+        t("error"),
+        isArabic
+          ? "حدث خطأ أثناء الحذف."
+          : "Something went wrong while deleting."
+      );
     }
   }
 
@@ -199,7 +223,9 @@ export default function AdminSubmissionsScreen() {
       <AppShell>
         <View style={styles.loadingBox}>
           <ActivityIndicator size="large" color="#2563eb" />
-          <Text style={styles.loadingText}>Loading submissions...</Text>
+          <Text style={styles.loadingText}>
+            {isArabic ? "جاري تحميل الإدخالات..." : "Loading submissions..."}
+          </Text>
         </View>
       </AppShell>
     );
@@ -213,11 +239,16 @@ export default function AdminSubmissionsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <View style={styles.headerCard}>
-          <View style={styles.headerTextBox}>
-            <Text style={styles.pageTitle}>Submissions</Text>
-            <Text style={styles.pageSubtitle}>
-              Review customer submissions, GPS locations and sales details
+        <View style={[styles.headerCard, isArabic && styles.rowReverse]}>
+          <View style={[styles.headerTextBox, isArabic && styles.headerTextBoxRtl]}>
+            <Text style={[styles.pageTitle, isArabic && styles.rtlText]}>
+              {t("submissions")}
+            </Text>
+
+            <Text style={[styles.pageSubtitle, isArabic && styles.rtlText]}>
+              {isArabic
+                ? "مراجعة إدخالات العملاء ومواقع GPS وبيانات المبيعات"
+                : "Review customer submissions, GPS locations and sales details"}
             </Text>
           </View>
 
@@ -226,46 +257,65 @@ export default function AdminSubmissionsScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.summaryRow}>
+        <View style={[styles.summaryRow, isArabic && styles.rowReverse]}>
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryValue}>{submissions.length}</Text>
-            <Text style={styles.summaryLabel}>Total Submissions</Text>
+            <Text style={[styles.summaryValue, isArabic && styles.rtlText]}>
+              {submissions.length}
+            </Text>
+            <Text style={[styles.summaryLabel, isArabic && styles.rtlText]}>
+              {isArabic ? "إجمالي الإدخالات" : "Total Submissions"}
+            </Text>
           </View>
 
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryValue}>{filteredSubmissions.length}</Text>
-            <Text style={styles.summaryLabel}>Visible Results</Text>
+            <Text style={[styles.summaryValue, isArabic && styles.rtlText]}>
+              {filteredSubmissions.length}
+            </Text>
+            <Text style={[styles.summaryLabel, isArabic && styles.rtlText]}>
+              {isArabic ? "النتائج الظاهرة" : "Visible Results"}
+            </Text>
           </View>
         </View>
 
-        <View style={styles.searchBox}>
+        <View style={[styles.searchBox, isArabic && styles.rowReverse]}>
           <Search size={18} color="#64748b" />
           <TextInput
             value={searchText}
             onChangeText={setSearchText}
-            placeholder="Search by customer, invoice, phone or region"
+            placeholder={
+              isArabic
+                ? "ابحث باسم العميل أو الفاتورة أو الهاتف أو المنطقة"
+                : "Search by customer, invoice, phone or region"
+            }
             placeholderTextColor="#94a3b8"
-            style={styles.searchInput}
+            style={[styles.searchInput, isArabic && styles.rtlInput]}
+            textAlign={isArabic ? "right" : "left"}
           />
         </View>
 
         {filteredSubmissions.length === 0 ? (
           <View style={styles.emptyCard}>
             <FileText size={34} color="#94a3b8" />
-            <Text style={styles.emptyTitle}>No submissions found</Text>
-            <Text style={styles.emptyText}>
-              Pull down to refresh or adjust your search keywords.
+            <Text style={[styles.emptyTitle, isArabic && styles.rtlText]}>
+              {isArabic ? "لا توجد إدخالات" : "No submissions found"}
+            </Text>
+            <Text style={[styles.emptyText, isArabic && styles.rtlText]}>
+              {isArabic
+                ? "اسحب لأسفل للتحديث أو عدّل كلمات البحث."
+                : "Pull down to refresh or adjust your search keywords."}
             </Text>
           </View>
         ) : (
           <View style={styles.list}>
             {filteredSubmissions.map((item) => (
               <View key={item.id} style={styles.card}>
-                <View style={styles.cardHeader}>
+                <View style={[styles.cardHeader, isArabic && styles.rowReverse]}>
                   <View style={styles.cardTitleBox}>
-                    <Text style={styles.customerName}>{item.customer_name}</Text>
-                    <Text style={styles.invoiceText}>
-                      Invoice: {item.invoice_number}
+                    <Text style={[styles.customerName, isArabic && styles.rtlText]}>
+                      {item.customer_name}
+                    </Text>
+                    <Text style={[styles.invoiceText, isArabic && styles.rtlText]}>
+                      {t("invoiceNumber")}: {item.invoice_number}
                     </Text>
                   </View>
 
@@ -278,45 +328,68 @@ export default function AdminSubmissionsScreen() {
                 </View>
 
                 <View style={styles.infoGrid}>
-                  <InfoRow icon={Phone} label="Phone" value={item.phone} />
-                  <InfoRow icon={MapPin} label="Address" value={item.address} />
+                  <InfoRow
+                    icon={Phone}
+                    label={t("phone")}
+                    value={item.phone}
+                    isArabic={isArabic}
+                  />
+
+                  <InfoRow
+                    icon={MapPin}
+                    label={t("address")}
+                    value={item.address}
+                    isArabic={isArabic}
+                  />
+
                   <InfoRow
                     icon={User}
-                    label="Sales Rep"
+                    label={t("salesRep")}
                     value={item.sales_rep || "-"}
+                    isArabic={isArabic}
                   />
+
                   <InfoRow
                     icon={Calendar}
-                    label="Submitted"
-                    value={formatDate(item.created_at)}
+                    label={isArabic ? "تاريخ الإرسال" : "Submitted"}
+                    value={formatDate(item.created_at, language)}
+                    isArabic={isArabic}
                   />
                 </View>
 
-                <View style={styles.tagsRow}>
-                  <Tag label="Region" value={item.region} />
-                  <Tag label="District" value={item.district} />
-                  <Tag label="Sector" value={item.sector} />
-                  <Tag label="Territory" value={item.territory} />
-                  <Tag label="Team" value={item.sales_team} />
+                <View style={[styles.tagsRow, isArabic && styles.rowReverse]}>
+                  <Tag label={t("region")} value={item.region} isArabic={isArabic} />
+                  <Tag label={t("district")} value={item.district} isArabic={isArabic} />
+                  <Tag label={t("sector")} value={item.sector} isArabic={isArabic} />
+                  <Tag label={t("territory")} value={item.territory} isArabic={isArabic} />
+                  <Tag label={t("salesTeam")} value={item.sales_team} isArabic={isArabic} />
                 </View>
 
                 {!!item.notes && (
                   <View style={styles.notesBox}>
-                    <Text style={styles.notesLabel}>Notes</Text>
-                    <Text style={styles.notesText}>{item.notes}</Text>
+                    <Text style={[styles.notesLabel, isArabic && styles.rtlText]}>
+                      {t("notes")}
+                    </Text>
+                    <Text style={[styles.notesText, isArabic && styles.rtlText]}>
+                      {item.notes}
+                    </Text>
                   </View>
                 )}
 
                 {!!item.device_info && (
-                  <Text style={styles.deviceText}>{item.device_info}</Text>
+                  <Text style={[styles.deviceText, isArabic && styles.rtlText]}>
+                    {item.device_info}
+                  </Text>
                 )}
 
                 <Pressable
-                  style={styles.mapButton}
+                  style={[styles.mapButton, isArabic && styles.rowReverseCenter]}
                   onPress={() => openMap(item)}
                 >
                   <MapPin size={16} color="#ffffff" />
-                  <Text style={styles.mapButtonText}>Open GPS Location</Text>
+                  <Text style={styles.mapButtonText}>
+                    {isArabic ? "فتح موقع GPS" : "Open GPS Location"}
+                  </Text>
                 </Pressable>
               </View>
             ))}
@@ -331,17 +404,23 @@ type InfoRowProps = {
   icon: typeof Phone;
   label: string;
   value: string;
+  isArabic: boolean;
 };
 
-function InfoRow({ icon: Icon, label, value }: InfoRowProps) {
+function InfoRow({ icon: Icon, label, value, isArabic }: InfoRowProps) {
   return (
-    <View style={styles.infoRow}>
+    <View style={[styles.infoRow, isArabic && styles.rowReverse]}>
       <View style={styles.infoIcon}>
         <Icon size={15} color="#2563eb" />
       </View>
+
       <View style={styles.infoTextBox}>
-        <Text style={styles.infoLabel}>{label}</Text>
-        <Text style={styles.infoValue}>{value}</Text>
+        <Text style={[styles.infoLabel, isArabic && styles.rtlText]}>
+          {label}
+        </Text>
+        <Text style={[styles.infoValue, isArabic && styles.rtlText]}>
+          {value}
+        </Text>
       </View>
     </View>
   );
@@ -350,15 +429,16 @@ function InfoRow({ icon: Icon, label, value }: InfoRowProps) {
 type TagProps = {
   label: string;
   value: string | null;
+  isArabic: boolean;
 };
 
-function Tag({ label, value }: TagProps) {
+function Tag({ label, value, isArabic }: TagProps) {
   if (!value) return null;
 
   return (
     <View style={styles.tag}>
-      <Text style={styles.tagLabel}>{label}</Text>
-      <Text style={styles.tagValue}>{value}</Text>
+      <Text style={[styles.tagLabel, isArabic && styles.rtlText]}>{label}</Text>
+      <Text style={[styles.tagValue, isArabic && styles.rtlText]}>{value}</Text>
     </View>
   );
 }
@@ -369,11 +449,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
   loadingText: {
     marginTop: 10,
     color: "#64748b",
     fontWeight: "700",
   },
+
   headerCard: {
     backgroundColor: "#ffffff",
     borderRadius: 20,
@@ -385,21 +467,30 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 14,
   },
+
   headerTextBox: {
     flex: 1,
     paddingRight: 12,
   },
+
+  headerTextBoxRtl: {
+    paddingRight: 0,
+    paddingLeft: 12,
+  },
+
   pageTitle: {
     fontSize: 24,
     fontWeight: "900",
     color: "#0f172a",
   },
+
   pageSubtitle: {
     marginTop: 4,
     fontSize: 13,
     color: "#64748b",
     lineHeight: 19,
   },
+
   refreshButton: {
     width: 40,
     height: 40,
@@ -408,11 +499,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
   summaryRow: {
     flexDirection: "row",
     gap: 10,
     marginBottom: 14,
   },
+
   summaryCard: {
     flex: 1,
     backgroundColor: "#ffffff",
@@ -421,17 +514,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e2e8f0",
   },
+
   summaryValue: {
     fontSize: 24,
     fontWeight: "900",
     color: "#2563eb",
   },
+
   summaryLabel: {
     marginTop: 3,
     fontSize: 12,
     fontWeight: "800",
     color: "#64748b",
   },
+
   searchBox: {
     minHeight: 50,
     backgroundColor: "#ffffff",
@@ -444,11 +540,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
+
   searchInput: {
     flex: 1,
     color: "#0f172a",
     fontSize: 14,
   },
+
   emptyCard: {
     backgroundColor: "#ffffff",
     borderRadius: 20,
@@ -459,21 +557,25 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 22,
   },
+
   emptyTitle: {
     marginTop: 12,
     fontSize: 18,
     fontWeight: "900",
     color: "#0f172a",
   },
+
   emptyText: {
     marginTop: 6,
     fontSize: 13,
     color: "#64748b",
     textAlign: "center",
   },
+
   list: {
     gap: 12,
   },
+
   card: {
     backgroundColor: "#ffffff",
     borderRadius: 20,
@@ -481,6 +583,7 @@ const styles = StyleSheet.create({
     borderColor: "#e2e8f0",
     padding: 14,
   },
+
   cardHeader: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -488,20 +591,24 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 12,
   },
+
   cardTitleBox: {
     flex: 1,
   },
+
   customerName: {
     fontSize: 18,
     fontWeight: "900",
     color: "#0f172a",
   },
+
   invoiceText: {
     marginTop: 3,
     fontSize: 12,
     fontWeight: "800",
     color: "#64748b",
   },
+
   deleteButton: {
     width: 36,
     height: 36,
@@ -512,14 +619,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
   infoGrid: {
     gap: 8,
   },
+
   infoRow: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 9,
   },
+
   infoIcon: {
     width: 28,
     height: 28,
@@ -529,15 +639,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: 2,
   },
+
   infoTextBox: {
     flex: 1,
   },
+
   infoLabel: {
     fontSize: 11,
     fontWeight: "900",
     color: "#64748b",
     textTransform: "uppercase",
   },
+
   infoValue: {
     marginTop: 2,
     fontSize: 13,
@@ -545,12 +658,14 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     fontWeight: "700",
   },
+
   tagsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
     marginTop: 12,
   },
+
   tag: {
     borderRadius: 999,
     backgroundColor: "#f8fafc",
@@ -559,18 +674,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
+
   tagLabel: {
     fontSize: 9,
     fontWeight: "900",
     color: "#94a3b8",
     textTransform: "uppercase",
   },
+
   tagValue: {
     marginTop: 1,
     fontSize: 11,
     fontWeight: "900",
     color: "#334155",
   },
+
   notesBox: {
     marginTop: 12,
     borderRadius: 14,
@@ -579,23 +697,27 @@ const styles = StyleSheet.create({
     borderColor: "#fde68a",
     padding: 10,
   },
+
   notesLabel: {
     fontSize: 11,
     fontWeight: "900",
     color: "#92400e",
     marginBottom: 3,
   },
+
   notesText: {
     fontSize: 13,
     color: "#78350f",
     lineHeight: 19,
   },
+
   deviceText: {
     marginTop: 10,
     fontSize: 11,
     color: "#94a3b8",
     lineHeight: 16,
   },
+
   mapButton: {
     marginTop: 12,
     height: 44,
@@ -606,9 +728,27 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
   },
+
   mapButtonText: {
     color: "#ffffff",
     fontSize: 13,
     fontWeight: "900",
+  },
+
+  rtlText: {
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+
+  rtlInput: {
+    writingDirection: "rtl",
+  },
+
+  rowReverse: {
+    flexDirection: "row-reverse",
+  },
+
+  rowReverseCenter: {
+    flexDirection: "row-reverse",
   },
 });
