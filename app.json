@@ -7,6 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "kaeemmobileapp",
     "userInterfaceStyle": "automatic",
+    "jsEngine": "jsc",
     "android": {
       "package": "com.ahmedbarakat.kaeemmobileapp",
       "versionCode": 1,
@@ -40,8 +41,7 @@
       ]
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
     },
     "extra": {
       "router": {},
@@ -49,7 +49,5 @@
         "projectId": "efd433a7-f4ba-4248-b386-f73e69b84aa4"
       }
     }
-    
   }
-
 }
