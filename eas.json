@@ -1,11 +1,22 @@
 {
+  "cli": {
+    "appVersionSource": "remote"
+  },
   "build": {
     "preview": {
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://dqyaotlpfeuuogxepugo.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_Gd6Oj45kfQFB0GweSUnRig_PhV9CXeR"
+      },
       "android": {
         "buildType": "apk"
       }
     },
     "production": {
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://dqyaotlpfeuuogxepugo.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_Gd6Oj45kfQFB0GweSUnRig_PhV9CXeR"
+      },
       "android": {
         "buildType": "app-bundle"
       }
