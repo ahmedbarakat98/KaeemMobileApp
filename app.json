@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "kaeemmobileapp",
     "userInterfaceStyle": "automatic",
-    "jsEngine": "jsc",
+    "jsEngine": "hermes",
     "android": {
       "package": "com.ahmedbarakat.kaeemmobileapp",
       "versionCode": 1,
